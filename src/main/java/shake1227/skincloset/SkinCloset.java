@@ -19,10 +19,12 @@ import shake1227.skincloset.skin.SkinCache;
 
 @Mod(Constants.MOD_ID)
 public class SkinCloset {
+
     public static final Logger LOGGER = LogManager.getLogger();
 
     public SkinCloset() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+
         modEventBus.addListener(this::clientSetup);
     }
 

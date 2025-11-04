@@ -26,11 +26,14 @@ import java.util.Map;
 import java.util.Optional;
 
 public class SkinClosetScreen extends Screen {
+
     private static final float REFERENCE_HEIGHT = 480.0f;
+
     private static final int V_SIDEBAR_WIDTH = 109;
     private static final int V_PADDING = 9;
     private static final int V_BUTTON_HEIGHT = 25;
     private static final int V_TOP_MARGIN = 36;
+
     private static final int V_PREVIEW_WIDTH = 182;
     private static final int V_PREVIEW_HEIGHT = 273;
     private static final int V_PREVIEW_TO_EDIT_GAP = 14;
@@ -38,11 +41,14 @@ public class SkinClosetScreen extends Screen {
 
     private static final int SKIN_GRID_COLS = 4;
     private static final int SKIN_GRID_ROWS = 1;
+
     private static final int V_EDIT_PREVIEW_WIDTH = 246;
     private static final int V_EDIT_PREVIEW_HEIGHT = 324;
     private static final int V_EDIT_OPTIONS_WIDTH = 127;
+
     private static final float TITLE_TEXT_SCALE = 2.2f;
     private static final float GENERAL_TEXT_SCALE = 1.5f;
+
     private static final int V_NAME_TAG_HEIGHT = 5;
 
 
@@ -55,14 +61,19 @@ public class SkinClosetScreen extends Screen {
 
     private State currentState = State.LIST;
     private List<SkinProfile> skinProfiles;
+
     private int currentPage = 0;
     private int skinsPerPage = SKIN_GRID_COLS * SKIN_GRID_ROWS;
     private int totalPages = 0;
+
     private SkinProfile selectedProfile;
     private EditBox nameEditBox;
+
     private EditBox inputEditBox;
     private Component statusMessage = Component.empty();
+
     private Component currentTitle;
+
     private float scale;
     private int vWidth;
     private int vHeight;
@@ -80,16 +91,21 @@ public class SkinClosetScreen extends Screen {
     protected void init() {
         super.init();
         this.clearWidgets();
+
         this.scale = (float) this.height / REFERENCE_HEIGHT;
+
         this.vWidth = (int)(this.width / this.scale);
         this.vHeight = (int)(this.height / this.scale);
 
         this.vSidebarWidth = V_SIDEBAR_WIDTH;
+
         this.vContentXCenter = this.vSidebarWidth + ((this.vWidth - this.vSidebarWidth) / 2);
 
         this.skinProfiles = SkinCache.getProfiles();
         this.totalPages = (int) Math.ceil((double) this.skinProfiles.size() / this.skinsPerPage);
+
         buildSidebarWidgets();
+
         switch (this.currentState) {
             case LIST:
                 this.currentTitle = Component.translatable("gui.skincloset.title");
@@ -141,42 +157,45 @@ public class SkinClosetScreen extends Screen {
             this.statusMessage = Component.empty();
             this.init();
         }).bounds(xPos, yPos, width, height).build());
+
+        // ★ 修正: ランチャーからインポートボタンを削除
     }
 
     private void buildListWidgets() {
+
         int skinEntryHeight = V_NAME_TAG_HEIGHT + V_PREVIEW_HEIGHT + V_PREVIEW_TO_EDIT_GAP + V_BUTTON_HEIGHT + V_EDIT_TO_APPLY_GAP + V_BUTTON_HEIGHT;
         int totalGridWidth = (V_PREVIEW_WIDTH * SKIN_GRID_COLS) + (V_PADDING * (SKIN_GRID_COLS - 1));
         int gridStartY = V_TOP_MARGIN + 10;
         int gridStartX = this.vContentXCenter - (totalGridWidth / 2);
-
         int skinWidthWithPadding = V_PREVIEW_WIDTH + V_PADDING;
+
         int startIndex = currentPage * skinsPerPage;
         for (int i = 0; i < skinsPerPage; i++) {
             int profileIndex = startIndex + i;
             if (profileIndex >= this.skinProfiles.size()) break;
 
             SkinProfile profile = this.skinProfiles.get(profileIndex);
-
             int col = i % SKIN_GRID_COLS;
-
             int xPos = gridStartX + (col * skinWidthWithPadding);
             int yPos = gridStartY;
             int previewY = yPos + V_NAME_TAG_HEIGHT;
 
             this.addRenderableWidget(new PlayerPreviewWidget(xPos, previewY, V_PREVIEW_WIDTH, V_PREVIEW_HEIGHT, profile));
+
             int editY = previewY + V_PREVIEW_HEIGHT + V_PREVIEW_TO_EDIT_GAP;
             int applyY = editY + V_BUTTON_HEIGHT + V_EDIT_TO_APPLY_GAP;
+
             this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.edit"), (button) -> {
                 this.selectedProfile = profile;
                 this.currentState = State.EDITING;
                 this.init();
             }).bounds(xPos, editY, V_PREVIEW_WIDTH, V_BUTTON_HEIGHT).build());
+
             this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.apply"), (button) -> {
                 applySkin(profile);
             }).bounds(xPos, applyY, V_PREVIEW_WIDTH, V_BUTTON_HEIGHT).build());
         }
         int paginationY = this.vHeight - V_BUTTON_HEIGHT - 10;
-
         int paginationButtonWidth = 80;
         int pageTextWidth = 80;
         int prevButtonX = this.vContentXCenter - (pageTextWidth/2) - 5 - paginationButtonWidth;
@@ -212,6 +231,7 @@ public class SkinClosetScreen extends Screen {
         int optionsY = previewY;
 
         this.addRenderableWidget(new PlayerPreviewWidget(previewX, previewY, previewWidth, previewHeight, selectedProfile));
+
         this.nameEditBox = new EditBox(this.font, optionsX, optionsY, optionsWidth, V_BUTTON_HEIGHT, Component.translatable("gui.skincloset.profile_name"));
         this.nameEditBox.setValue(selectedProfile.getName());
         this.addRenderableWidget(this.nameEditBox);
@@ -223,6 +243,7 @@ public class SkinClosetScreen extends Screen {
         }).bounds(optionsX, optionsY, optionsWidth, V_BUTTON_HEIGHT).build());
 
         optionsY += V_BUTTON_HEIGHT + 10;
+
         Component modelButtonText = Component.translatable(selectedProfile.isSlim() ? "gui.skincloset.model_slim" : "gui.skincloset.model_classic");
         this.addRenderableWidget(Button.builder(modelButtonText, (button) -> {
             toggleModel();
@@ -254,6 +275,7 @@ public class SkinClosetScreen extends Screen {
         int optionsHeight = (optionsY + V_BUTTON_HEIGHT) - groupY;
         int groupHeight = Math.max(previewHeight + V_NAME_TAG_HEIGHT, optionsHeight);
         int backButtonY = groupY + groupHeight + 10;
+
         int maxButtonY = this.vHeight - V_BUTTON_HEIGHT - 10;
         if (backButtonY > maxButtonY) {
             backButtonY = maxButtonY;
@@ -265,33 +287,41 @@ public class SkinClosetScreen extends Screen {
             this.init();
         }).bounds(optionsX, backButtonY, optionsWidth, V_BUTTON_HEIGHT).build());
     }
+
     private void buildAddFromLocalWidgets() {
         int width = 200;
         int height = V_BUTTON_HEIGHT;
         int contentX = this.vContentXCenter - (width / 2);
         int contentY = (this.vHeight / 2) - (height * 2);
+
         this.inputEditBox = new EditBox(this.font, contentX, contentY, width, height, Component.translatable("gui.skincloset.profile_name"));
         this.inputEditBox.setHint(Component.translatable("gui.skincloset.local.hint"));
         this.addRenderableWidget(this.inputEditBox);
+
         this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.browse"), (button) -> {
             openFilePicker();
         }).bounds(contentX, contentY + height + 5, width, height).build());
+
         this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.back"), (button) -> {
             this.currentState = State.LIST;
             this.statusMessage = Component.empty();
             this.init();
         }).bounds(contentX, contentY + (height + 5) * 2, width, height).build());
     }
+
     private void buildAddByNameWidgets() {
         int width = 200;
         int height = V_BUTTON_HEIGHT;
         int contentX = this.vContentXCenter - (width / 2);
         int contentY = (this.vHeight / 2) - (height * 2);
+
         this.inputEditBox = new EditBox(this.font, contentX, contentY, width, height, Component.translatable("gui.skincloset.username"));
         this.addRenderableWidget(this.inputEditBox);
+
         this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.fetch"), (button) -> {
             fetchSkinByName(this.inputEditBox.getValue());
         }).bounds(contentX, contentY + height + 5, width, height).build());
+
         this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.back"), (button) -> {
             this.currentState = State.LIST;
             this.statusMessage = Component.empty();
@@ -314,6 +344,7 @@ public class SkinClosetScreen extends Screen {
             this.statusMessage = Component.translatable("gui.skincloset.error.no_profile_name");
             return;
         }
+
         this.inputEditBox.setEditable(false);
         this.renderables.forEach(w -> { if (w instanceof Button b) b.active = false; });
 
@@ -343,6 +374,7 @@ public class SkinClosetScreen extends Screen {
             }
         }).start();
     }
+
     private void applySkin(SkinProfile profile) {
         if (profile == null) return;
         Optional<SkinProfile.SkinData> data = profile.getSkinData();
@@ -363,9 +395,11 @@ public class SkinClosetScreen extends Screen {
             this.currentTitle = Component.translatable("gui.skincloset.editing", this.selectedProfile.getName());
         }
     }
+
     private void addPlayerCurrentSkin() {
         try {
             GameProfile profile = this.minecraft.player.getGameProfile();
+
             Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> map = this.minecraft.getSkinManager().getInsecureSkinInformation(profile);
             if (!map.containsKey(MinecraftProfileTexture.Type.SKIN)) {
                 this.statusMessage = Component.translatable("gui.skincloset.error.self_no_skin");
@@ -378,7 +412,9 @@ public class SkinClosetScreen extends Screen {
             SkinCloset.LOGGER.info("Attempting to add current skin for {} from URL: {}", profileName, skinUrl);
 
             this.statusMessage = Component.translatable("gui.skincloset.uploading");
+
             this.renderables.forEach(w -> { if (w instanceof Button b) b.active = false; });
+
             SkinDownloader.uploadSkinFromUrl(profileName, skinUrl, (newProfile) -> {
                 if (newProfile != null) {
                     SkinCache.addProfile(newProfile);
@@ -420,11 +456,13 @@ public class SkinClosetScreen extends Screen {
             }
         });
     }
+
     private void uploadSkinFromLocal(String profileName, Path localSkinPath) {
         if (profileName == null || profileName.trim().isEmpty()) {
             this.statusMessage = Component.translatable("gui.skincloset.error.no_profile_name");
             return;
         }
+
         if (!Files.exists(localSkinPath)) {
             this.statusMessage = Component.translatable("gui.skincloset.error.local_not_found_generic");
             return;
@@ -472,27 +510,36 @@ public class SkinClosetScreen extends Screen {
             }
         });
     }
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(graphics);
+
         graphics.pose().pushPose();
         graphics.pose().scale(this.scale, this.scale, this.scale);
+
         int mouseXScaled = (int) (mouseX / this.scale);
         int mouseYScaled = (int) (mouseY / this.scale);
+
         graphics.fill(0, 0, this.vSidebarWidth, this.vHeight, 0x80000000);
+
         super.render(graphics, mouseXScaled, mouseYScaled, partialTick);
+
         int titleX = (this.vSidebarWidth + this.vWidth) / 2;
         int titleY = 10;
+
         graphics.pose().pushPose();
         graphics.pose().scale(TITLE_TEXT_SCALE, TITLE_TEXT_SCALE, 1.0f);
         graphics.drawCenteredString(this.font, this.currentTitle, (int)(titleX / TITLE_TEXT_SCALE), (int)(titleY / TITLE_TEXT_SCALE), 0xFFFFFF);
         graphics.pose().popPose();
+
 
         if (this.currentState == State.LIST) {
             renderSkinNames(graphics);
         } else if (this.currentState == State.EDITING && this.selectedProfile != null) {
             renderEditingSkinName(graphics);
         }
+
         if (this.currentState == State.ADD_BY_NAME || this.currentState == State.ADD_FROM_LOCAL) {
             int statusY = (this.vHeight / 2) + 50;
             graphics.drawCenteredString(this.font, this.statusMessage, this.vContentXCenter, statusY, 0xFFFF55);
@@ -501,13 +548,16 @@ public class SkinClosetScreen extends Screen {
         if (this.currentState == State.LIST && this.totalPages > 0) {
             String pageText = Component.translatable("gui.skincloset.page", this.currentPage + 1, this.totalPages).getString();
             int paginationY = this.vHeight - V_BUTTON_HEIGHT;
+
             graphics.pose().pushPose();
             graphics.pose().scale(GENERAL_TEXT_SCALE, GENERAL_TEXT_SCALE, 1.0f);
             graphics.drawCenteredString(this.font, pageText, (int)(this.vContentXCenter / GENERAL_TEXT_SCALE), (int)(paginationY / GENERAL_TEXT_SCALE), 0xFFFFFF);
             graphics.pose().popPose();
         }
+
         graphics.pose().popPose();
     }
+
     private void renderSkinNames(GuiGraphics graphics) {
         int totalGridWidth = (V_PREVIEW_WIDTH * SKIN_GRID_COLS) + (V_PADDING * (SKIN_GRID_COLS - 1));
         int gridStartY = V_TOP_MARGIN + 10;
@@ -523,18 +573,20 @@ public class SkinClosetScreen extends Screen {
             int col = i % SKIN_GRID_COLS;
             int xPos = gridStartX + (col * skinWidthWithPadding);
             int yPos = gridStartY;
+
             graphics.pose().pushPose();
             graphics.pose().scale(GENERAL_TEXT_SCALE, GENERAL_TEXT_SCALE, 1.0f);
             graphics.drawCenteredString(
                     this.font,
                     profile.getName(),
                     (int)((xPos + (V_PREVIEW_WIDTH / 2)) / GENERAL_TEXT_SCALE),
-                    (int)((yPos + 50) / GENERAL_TEXT_SCALE),
+                    (int)((yPos + 50) / GENERAL_TEXT_SCALE), // ★ あなたの設定
                     0xFFFFFF
             );
             graphics.pose().popPose();
         }
     }
+
     private void renderEditingSkinName(GuiGraphics graphics) {
         int previewWidth = V_EDIT_PREVIEW_WIDTH;
         int totalWidth = previewWidth + V_PADDING + V_EDIT_OPTIONS_WIDTH;
@@ -549,11 +601,12 @@ public class SkinClosetScreen extends Screen {
                 this.font,
                 this.selectedProfile.getName(),
                 (int)((previewX + (previewWidth / 2)) / GENERAL_TEXT_SCALE),
-                (int)((nameY + 50) / GENERAL_TEXT_SCALE),
+                (int)((nameY + 50) / GENERAL_TEXT_SCALE), // ★ あなたの設定
                 0xFFFFFF
         );
         graphics.pose().popPose();
     }
+
     @Override
     public boolean mouseClicked(double pMouseX, double pMouseY, int pButton) {
         return super.mouseClicked(pMouseX / this.scale, pMouseY / this.scale, pButton);

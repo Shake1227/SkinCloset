@@ -29,6 +29,7 @@ import java.util.function.Consumer;
 public class SkinDownloader {
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
+
     public static void fetchSkinByUsername(String username, Consumer<SkinProfile> callback) {
         SkinCloset.LOGGER.info("Fetching skin for username: {}", username);
         CompletableFuture.runAsync(() -> {
@@ -45,6 +46,7 @@ public class SkinDownloader {
                 UUID uuid = UUID.fromString(uuidStr.replaceFirst(
                         "(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{12})", "$1-$2-$3-$4-$5"
                 ));
+
                 String skinJson = fetch(Constants.MOJANG_SKIN_API + uuidStr + "?unsigned=false");
                 if (skinJson == null) {
                     SkinCloset.LOGGER.error("Failed to fetch Skin data for {} ({}). (Mojang API returned null)", actualName, uuidStr);
@@ -76,6 +78,7 @@ public class SkinDownloader {
             }
         });
     }
+
     public static void uploadSkinFromLocal(String profileName, Path filePath, Consumer<SkinProfile> callback) {
         SkinCloset.LOGGER.info("Uploading skin from local file: {} as {}", filePath, profileName);
         CompletableFuture.runAsync(() -> {
@@ -114,6 +117,7 @@ public class SkinDownloader {
             }
         });
     }
+
     public static void uploadSkinFromUrl(String profileName, String skinUrl, Consumer<SkinProfile> callback) {
         SkinCloset.LOGGER.info("Uploading skin from URL for {}: {}", profileName, skinUrl);
         CompletableFuture.runAsync(() -> {
@@ -155,6 +159,7 @@ public class SkinDownloader {
             }
         });
     }
+
     public static void downloadSkinTexture(String url, Path targetPath, Consumer<Boolean> callback) {
         CompletableFuture.runAsync(() -> {
             try (InputStream in = new URL(url).openStream()) {

@@ -13,6 +13,7 @@ import net.minecraft.network.protocol.game.ClientboundSetCarriedItemPacket;
 import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.server.players.PlayerList;
 import net.minecraftforge.network.NetworkEvent;
+import shake1227.skincloset.SkinCloset;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -29,8 +30,9 @@ public class C2SChangeSkinPacket {
     }
 
     public static void encode(C2SChangeSkinPacket pkt, FriendlyByteBuf buf) {
-        buf.writeUtf(pkt.value);
-        buf.writeUtf(pkt.signature);
+        // ★ 修正: ログ の NullPointerException を防ぐ
+        buf.writeUtf(pkt.value != null ? pkt.value : "");
+        buf.writeUtf(pkt.signature != null ? pkt.signature : "");
     }
 
     public static C2SChangeSkinPacket decode(FriendlyByteBuf buf) {
@@ -41,6 +43,11 @@ public class C2SChangeSkinPacket {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
             if (player == null) return;
+            if (pkt.value.isEmpty() || pkt.signature.isEmpty()) {
+                SkinCloset.LOGGER.warn("Received C2SChangeSkinPacket with empty value or signature from {}.", player.getName().getString());
+                return;
+            }
+
             GameProfile profile = player.getGameProfile();
             PropertyMap properties = profile.getProperties();
 
@@ -77,4 +84,3 @@ public class C2SChangeSkinPacket {
         ctx.get().setPacketHandled(true);
     }
 }
-
