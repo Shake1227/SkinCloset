@@ -19,27 +19,17 @@ import shake1227.skincloset.skin.SkinCache;
 
 @Mod(Constants.MOD_ID)
 public class SkinCloset {
-
     public static final Logger LOGGER = LogManager.getLogger();
 
     public SkinCloset() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-
-        // クライアントセットアップ
         modEventBus.addListener(this::clientSetup);
-
-        // --- 修正 4: この行を削除 ---
-        // `ClientEvents` が `@Mod.EventBusSubscriber` で自動登録されるため不要
-        // MinecraftForge.EVENT_BUS.register(this);
     }
 
     private void clientSetup(final FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
             PacketRegistry.register();
-            SkinCache.loadProfiles(); // 正しいメソッド名
+            SkinCache.loadProfiles();
         });
     }
-
-    // --- 修正 5: エラーの原因であり重複している内部クラス `ClientForgeEvents` をすべて削除 ---
-    // (core.ClientEvents が正しい処理を実装しているため)
 }

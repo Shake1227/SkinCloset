@@ -7,8 +7,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import shake1227.skincloset.Constants;
 import org.lwjgl.glfw.GLFW;
-
-// 1.20.1: イベントバスへの自動登録アノテーションを追加
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class Keybinds {
     public static final String KEY_CATEGORY_SKINCLOSET = "key.category.skincloset";
@@ -17,11 +15,9 @@ public class Keybinds {
     public static final KeyMapping OPEN_GUI_KEY = new KeyMapping(
             KEY_OPEN_GUI,
             InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_G, // Gキー
+            GLFW.GLFW_KEY_G,
             KEY_CATEGORY_SKINCLOSET
     );
-
-    // 1.20.1: @SubscribeEvent を追加し、イベントを引数に取る
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(OPEN_GUI_KEY);

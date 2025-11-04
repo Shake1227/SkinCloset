@@ -13,18 +13,17 @@ public class SkinProfile {
 
     private String name;
     private final UUID uuid;
-
-    // transient = JSONに保存しない
+    private final SkinData skinData;
+    private String model;
     private transient GameProfile gameProfile;
 
-    private final SkinData skinData;
 
     public record SkinData(String value, String signature) {}
-
-    public SkinProfile(String name, UUID uuid, String value, String signature) {
+    public SkinProfile(String name, UUID uuid, String value, String signature, String model) {
         this.name = name;
         this.uuid = uuid;
         this.skinData = new SkinData(value, signature);
+        this.model = (model == null || model.isEmpty()) ? "classic" : model;
     }
 
     public String getName() {
@@ -38,8 +37,15 @@ public class SkinProfile {
     public UUID getUuid() {
         return uuid;
     }
-
-    // 遅延読み込み (JSONからロードされた後、初めて呼ばれたときに復元する)
+    public String getModel() {
+        return (this.model == null || this.model.isEmpty()) ? "classic" : this.model;
+    }
+    public void setModel(String model) {
+        this.model = model;
+    }
+    public boolean isSlim() {
+        return "slim".equals(this.getModel());
+    }
     public GameProfile getGameProfile() {
         if (this.gameProfile == null) {
             this.gameProfile = new GameProfile(this.uuid, this.name);

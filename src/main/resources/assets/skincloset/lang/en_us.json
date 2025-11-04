@@ -7,25 +7,33 @@
   "gui.skincloset.add_by_name": "Add by Name",
   "gui.skincloset.add_from_local": "Add from Local",
   "gui.skincloset.add_my_skin": "Add My Skin",
+  "gui.skincloset.import_launcher": "Import from Launcher",
 
   "gui.skincloset.apply": "Apply",
   "gui.skincloset.edit": "Edit",
   "gui.skincloset.back": "Back",
   "gui.skincloset.fetch": "Fetch Skin",
+  "gui.skincloset.browse": "Browse File...",
+  "gui.skincloset.browse.title": "Select Skin File (.png)",
   "gui.skincloset.upload": "Upload Skin",
   "gui.skincloset.save_name": "Save Name",
   "gui.skincloset.delete": "Delete",
   "gui.skincloset.download": "Download Skin",
 
+  "gui.skincloset.model_classic": "Model: Classic (Steve)",
+  "gui.skincloset.model_slim": "Model: Slim (Alex)",
+  "gui.skincloset.model_switched": "Model changed to %s",
+
   "gui.skincloset.profile_name": "Profile Name",
   "gui.skincloset.username": "Minecraft Username",
-  "gui.skincloset.local.hint": "filename.png (in /config/skincloset/uploads/)",
-  "gui.skincloset.local.info": "Place skin file in 'config/skincloset/uploads/'",
+  "gui.skincloset.local.hint": "Profile name to save",
+  "gui.skincloset.local.info": "(Deprecated) Place skin file in 'config/skincloset/uploads/'",
 
   "gui.skincloset.page": "Page %s / %s",
 
   "gui.skincloset.fetching": "Fetching skin...",
   "gui.skincloset.uploading": "Uploading skin...",
+  "gui.skincloset.importing": "Importing launcher skins...",
 
   "gui.skincloset.applied": "Skin '%s' applied!",
   "gui.skincloset.name_saved": "Name saved as '%s'",
@@ -38,9 +46,14 @@
   "gui.skincloset.error.not_found": "Could not find player: %s",
   "gui.skincloset.error.no_name": "Please enter a username",
   "gui.skincloset.error.no_profile_name": "Please enter a profile name",
-  "gui.skincloset.error.local_not_found": "File not found: %s. Check /config/skincloset/uploads/",
+  "gui.skincloset.error.local_not_found": "(Deprecated) File not found: %s. Check /config/skincloset/uploads/",
+  "gui.skincloset.error.local_not_found_generic": "File not found. Please check the path.",
   "gui.skincloset.error.upload_failed": "Skin upload failed",
   "gui.skincloset.error.no_texture": "Could not find texture URL for this skin",
   "gui.skincloset.error.download_failed": "Download failed",
-  "gui.skincloset.error.self_no_skin": "Could not find your own skin properties. Are you online?"
+  "gui.skincloset.error.self_no_skin": "Could not find your own skin properties. Are you online?",
+
+  "gui.skincloset.import_success": "Imported %s skins from launcher",
+  "gui.skincloset.import_nothing_new": "No new skins found to import",
+  "gui.skincloset.import_failed": "Failed to read launcher skins"
 }

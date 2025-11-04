@@ -9,7 +9,6 @@ public class PacketRegistry {
 
     private static final String PROTOCOL_VERSION = "1";
 
-    // --- エラー修正のため public static final に変更 ---
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "main"),
             () -> PROTOCOL_VERSION,

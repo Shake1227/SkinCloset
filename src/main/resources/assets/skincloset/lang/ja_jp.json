@@ -1,0 +1,59 @@
+{
+  "key.category.skincloset": "SkinCloset",
+  "key.skincloset.open_gui": "スキンクローゼットを開く",
+
+  "gui.skincloset.title": "スキンクローゼット",
+  "gui.skincloset.editing": "編集中: %s",
+  "gui.skincloset.add_by_name": "名前で追加",
+  "gui.skincloset.add_from_local": "ローカルから追加",
+  "gui.skincloset.add_my_skin": "自分のスキンを追加",
+  "gui.skincloset.import_launcher": "ランチャーからインポート",
+
+  "gui.skincloset.apply": "適用",
+  "gui.skincloset.edit": "編集",
+  "gui.skincloset.back": "戻る",
+  "gui.skincloset.fetch": "スキンを取得",
+  "gui.skincloset.browse": "ファイルを選択...",
+  "gui.skincloset.browse.title": "スキンファイルを選択 (.png)",
+  "gui.skincloset.upload": "アップロード",
+  "gui.skincloset.save_name": "名前を保存",
+  "gui.skincloset.delete": "削除",
+  "gui.skincloset.download": "スキンをダウンロード",
+
+  "gui.skincloset.model_classic": "モデル: クラシック (Steve)",
+  "gui.skincloset.model_slim": "モデル: スリム (Alex)",
+  "gui.skincloset.model_switched": "モデルを %s に変更しました",
+
+  "gui.skincloset.profile_name": "プロファイル名",
+  "gui.skincloset.username": "Minecraft ユーザー名",
+  "gui.skincloset.local.hint": "保存するプロファイル名",
+  "gui.skincloset.local.info": "(非推奨) config/skincloset/uploads/ に配置",
+
+  "gui.skincloset.page": "ページ %s / %s",
+
+  "gui.skincloset.fetching": "スキンを取得中...",
+  "gui.skincloset.uploading": "スキンをアップロード中...",
+  "gui.skincloset.importing": "ランチャースキンをインポート中...",
+
+  "gui.skincloset.applied": "スキン '%s' を適用しました！",
+  "gui.skincloset.name_saved": "名前を '%s' として保存しました",
+
+  "gui.skincloset.success.added": "%s のスキンを追加しました",
+  "gui.skincloset.success.uploaded": "%s をアップロードして追加しました",
+  "gui.skincloset.success.downloaded": "スキンを %s としてダウンロードに保存しました",
+  "gui.skincloset.success.added_self": "現在のスキンを追加しました！",
+
+  "gui.skincloset.error.not_found": "プレイヤーが見つかりません: %s",
+  "gui.skincloset.error.no_name": "ユーザー名を入力してください",
+  "gui.skincloset.error.no_profile_name": "プロファイル名を入力してください",
+  "gui.skincloset.error.local_not_found": "(非推奨) %s が見つかりません。uploadsフォルダを確認してください。",
+  "gui.skincloset.error.local_not_found_generic": "ファイルが見つかりません。パスを確認してください。",
+  "gui.skincloset.error.upload_failed": "スキンのアップロードに失敗しました",
+  "gui.skincloset.error.no_texture": "このスキンのテクスチャURLが見つかりません",
+  "gui.skincloset.error.download_failed": "ダウンロードに失敗しました",
+  "gui.skincloset.error.self_no_skin": "自分のスキン情報が見つかりません。オンラインですか？",
+
+  "gui.skincloset.import_success": "ランチャースキン %s 件をインポートしました",
+  "gui.skincloset.import_nothing_new": "インポートする新しいスキンはありませんでした",
+  "gui.skincloset.import_failed": "ランチャースキンの読み込みに失敗しました"
+}
