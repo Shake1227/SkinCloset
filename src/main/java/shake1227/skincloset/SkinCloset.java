@@ -28,8 +28,9 @@ public class SkinCloset {
         // クライアントセットアップ
         modEventBus.addListener(this::clientSetup);
 
-        // Forgeのイベントバス（キー入力など）
-        MinecraftForge.EVENT_BUS.register(this);
+        // --- 修正 4: この行を削除 ---
+        // `ClientEvents` が `@Mod.EventBusSubscriber` で自動登録されるため不要
+        // MinecraftForge.EVENT_BUS.register(this);
     }
 
     private void clientSetup(final FMLClientSetupEvent event) {
@@ -39,15 +40,6 @@ public class SkinCloset {
         });
     }
 
-    // Dist.CLIENTを指定して、クライアントサイドでのみこのイベントをリッスンする
-    @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT)
-    public static class ClientForgeEvents {
-        @SubscribeEvent
-        public static void onKeyInput(InputEvent.Key event) {
-            if (Keybinds.OPEN_GUI.consumeClick()) {
-                Minecraft.getInstance().setScreen(new SkinClosetScreen());
-            }
-        }
-    }
+    // --- 修正 5: エラーの原因であり重複している内部クラス `ClientForgeEvents` をすべて削除 ---
+    // (core.ClientEvents が正しい処理を実装しているため)
 }
-

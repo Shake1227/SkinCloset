@@ -16,7 +16,6 @@ import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.DefaultPlayerSkin;
-import net.minecraft.client.resources.skin.Skin; // このインポートが必要です
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -39,21 +38,21 @@ public class PlayerPreviewWidget extends AbstractWidget {
     private void loadSkin() {
         Minecraft minecraft = Minecraft.getInstance();
 
-        // GameProfileからスキン情報を取得
-        Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> map = minecraft.getSkinManager().getInsecureSkinInformation(this.gameProfile);
+        if (this.gameProfile != null && this.gameProfile.getProperties() != null) {
+            Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> map = minecraft.getSkinManager().getInsecureSkinInformation(this.gameFProfile);
 
-        if (map.containsKey(MinecraftProfileTexture.Type.SKIN)) {
-            // プレイヤーのスキンがある場合
-            MinecraftProfileTexture texture = map.get(MinecraftProfileTexture.Type.SKIN);
-            this.skinLocation = minecraft.getSkinManager().registerTexture(texture, MinecraftProfileTexture.Type.SKIN);
-            this.isSlim = texture.getMetadata("model") != null && texture.getMetadata("model").equals("slim");
+            if (map.containsKey(MinecraftProfileTexture.Type.SKIN)) {
+                // プレイヤーのスキンがある場合
+                MinecraftProfileTexture texture = map.get(MinecraftProfileTexture.Type.SKIN);
+                this.skinLocation = minecraft.getSkinManager().registerTexture(texture, MinecraftProfileTexture.Type.SKIN);
+                this.isSlim = texture.getMetadata("model") != null && texture.getMetadata("model").equals("slim");
+            } else {
+                // スキン情報が無い場合 (デフォルトスキンへフォールバック)
+                loadDefaultSkin();
+            }
         } else {
-            // スキンがない場合（デフォルトスキン）
-            UUID uuid = this.gameProfile != null ? this.gameProfile.getId() : Util.NIL_UUID;
-            // Skin skin = DefaultPlayerSkin.forPlayer(uuid); -> 修正
-            Skin skin = DefaultPlayerSkin.get(uuid); // 1.20.1では get(UUID) を使用
-            this.skinLocation = skin.texture();
-            this.isSlim = skin.model() == Skin.Model.SLIM; // PlayerSkin.Model -> Skin.Model
+            // gameProfile が null の場合 (デフォルトスキン)
+            loadDefaultSkin();
         }
 
         // 1.20.1: get(ModelLayers.PLAYER) または PLAYER_SLIM
@@ -66,6 +65,23 @@ public class PlayerPreviewWidget extends AbstractWidget {
         this.playerModel.setAllVisible(true);
     }
 
+    // デフォルトスキン読み込み処理 (UUIDのnullチェック)
+    private void loadDefaultSkin() {
+        UUID playerUuid = null;
+
+        if (this.gameProfile != null) {
+            playerUuid = this.gameProfile.getId(); // ID が null の可能性あり
+        }
+
+        if (playerUuid == null) {
+            playerUuid = Util.NIL_UUID; // NullPointerException を回避
+        }
+
+        this.skinLocation = DefaultPlayerSkin.getDefaultSkin(playerUuid);
+        // getModelName() が正しい
+        this.isSlim = DefaultPlayerSkin.getSkinModelName(playerUuid).equals("slim");
+    }
+
     @Override
     public void renderWidget(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
         if (this.skinLocation == null || this.playerModel == null) {
@@ -75,21 +91,16 @@ public class PlayerPreviewWidget extends AbstractWidget {
         PoseStack pPoseStack = pGuiGraphics.pose();
         pPoseStack.pushPose();
 
-        // ウィジェットの中央に移動
         pPoseStack.translate(this.getX() + this.width / 2.0, this.getY() + this.height * 0.9, 100.0);
 
         // スケール調整 (GUIのサイズに合わせる)
+        // (150の高さのウィジェットの場合、スケールは約50になる)
         float scale = this.height / 3.0f;
         pPoseStack.scale(-scale, -scale, scale); // XとYを反転させて正面を向かせる
 
-        // 1.20.1: 逆さまになるZ軸回転を削除
-        // pPoseStack.mulPose(Axis.ZP.rotationDegrees(180.0F));
-
-        // 要求：右斜め前を向く
-        float yRot = 155.0F; // 約155度 (右斜め前)
+        float yRot = 155.0F; // 右斜め前
         float xRot = 15.0F;  // 少し見下ろす
 
-        // 要求：ホバーで回転
         if (this.isHoveredOrFocused()) {
             yRot = (Util.getMillis() / 20.0F) % 360.0F; // Y軸でゆっくり回転
         }
@@ -97,15 +108,10 @@ public class PlayerPreviewWidget extends AbstractWidget {
         pPoseStack.mulPose(Axis.YP.rotationDegrees(yRot));
         pPoseStack.mulPose(Axis.XP.rotationDegrees(xRot));
 
-        // ライティング
         Lighting.setupForEntityInInventory();
 
-        // 描画
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         RenderSystem.setShaderTexture(0, this.skinLocation);
-
-        // 1.20.1: T-Pose (setupAnimはLivingEntityが必要なため使わない)
-        // this.playerModel.setupAnim(0, 0, 0, 0, 0); // 使えない
 
         this.playerModel.renderToBuffer(
                 pPoseStack,
@@ -117,8 +123,7 @@ public class PlayerPreviewWidget extends AbstractWidget {
 
         bufferSource.endBatch();
         pPoseStack.popPose();
-        // Lighting.setupScreen(); -> 修正
-        Lighting.setupForFlatItems(); // setupScreen() は 1.20.1 に存在しない
+        Lighting.setupForFlatItems();
     }
 
 
@@ -127,4 +132,3 @@ public class PlayerPreviewWidget extends AbstractWidget {
         // アクセシビリティ対応 (今回は省略)
     }
 }
-

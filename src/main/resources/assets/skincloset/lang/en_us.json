@@ -1,0 +1,46 @@
+{
+  "key.category.skincloset": "SkinCloset",
+  "key.skincloset.open_gui": "Open Skin Closet",
+
+  "gui.skincloset.title": "Skin Closet",
+  "gui.skincloset.editing": "Editing: %s",
+  "gui.skincloset.add_by_name": "Add by Name",
+  "gui.skincloset.add_from_local": "Add from Local",
+  "gui.skincloset.add_my_skin": "Add My Skin",
+
+  "gui.skincloset.apply": "Apply",
+  "gui.skincloset.edit": "Edit",
+  "gui.skincloset.back": "Back",
+  "gui.skincloset.fetch": "Fetch Skin",
+  "gui.skincloset.upload": "Upload Skin",
+  "gui.skincloset.save_name": "Save Name",
+  "gui.skincloset.delete": "Delete",
+  "gui.skincloset.download": "Download Skin",
+
+  "gui.skincloset.profile_name": "Profile Name",
+  "gui.skincloset.username": "Minecraft Username",
+  "gui.skincloset.local.hint": "filename.png (in /config/skincloset/uploads/)",
+  "gui.skincloset.local.info": "Place skin file in 'config/skincloset/uploads/'",
+
+  "gui.skincloset.page": "Page %s / %s",
+
+  "gui.skincloset.fetching": "Fetching skin...",
+  "gui.skincloset.uploading": "Uploading skin...",
+
+  "gui.skincloset.applied": "Skin '%s' applied!",
+  "gui.skincloset.name_saved": "Name saved as '%s'",
+
+  "gui.skincloset.success.added": "Added skin for %s",
+  "gui.skincloset.success.uploaded": "Uploaded and added %s",
+  "gui.skincloset.success.downloaded": "Skin saved to Downloads as %s",
+  "gui.skincloset.success.added_self": "Successfully added your current skin!",
+
+  "gui.skincloset.error.not_found": "Could not find player: %s",
+  "gui.skincloset.error.no_name": "Please enter a username",
+  "gui.skincloset.error.no_profile_name": "Please enter a profile name",
+  "gui.skincloset.error.local_not_found": "File not found: %s. Check /config/skincloset/uploads/",
+  "gui.skincloset.error.upload_failed": "Skin upload failed",
+  "gui.skincloset.error.no_texture": "Could not find texture URL for this skin",
+  "gui.skincloset.error.download_failed": "Download failed",
+  "gui.skincloset.error.self_no_skin": "Could not find your own skin properties. Are you online?"
+}

@@ -13,19 +13,18 @@ public class SkinProfile {
 
     private String name;
     private final UUID uuid;
-    private final GameProfile gameProfile;
+
+    // transient = JSONに保存しない
+    private transient GameProfile gameProfile;
+
     private final SkinData skinData;
 
-    // SkinDataレコードをpublicに変更
     public record SkinData(String value, String signature) {}
 
     public SkinProfile(String name, UUID uuid, String value, String signature) {
         this.name = name;
         this.uuid = uuid;
         this.skinData = new SkinData(value, signature);
-
-        this.gameProfile = new GameProfile(uuid, name);
-        this.gameProfile.getProperties().put("textures", new Property("textures", value, signature));
     }
 
     public String getName() {
@@ -40,9 +39,14 @@ public class SkinProfile {
         return uuid;
     }
 
-    // --- エラー修正のためにゲッターを追加 ---
-
+    // 遅延読み込み (JSONからロードされた後、初めて呼ばれたときに復元する)
     public GameProfile getGameProfile() {
+        if (this.gameProfile == null) {
+            this.gameProfile = new GameProfile(this.uuid, this.name);
+            if (this.skinData != null) {
+                this.gameProfile.getProperties().put("textures", new Property("textures", this.skinData.value(), this.skinData.signature()));
+            }
+        }
         return this.gameProfile;
     }
 
@@ -65,4 +69,3 @@ public class SkinProfile {
         }
     }
 }
-

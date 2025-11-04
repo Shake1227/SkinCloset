@@ -1,30 +1,34 @@
 package shake1227.skincloset.client.gui;
 
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
-import shake1227.skincloset.Constants;
 import shake1227.skincloset.network.C2SChangeSkinPacket;
 import shake1227.skincloset.network.PacketRegistry;
 import shake1227.skincloset.skin.SkinCache;
 import shake1227.skincloset.skin.SkinDownloader;
 import shake1227.skincloset.skin.SkinProfile;
 
-import java.nio.file.Files; // エラー修正のためインポートを追加
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
 public class SkinClosetScreen extends Screen {
 
-    private static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "textures/gui/background.png");
-    private static final Component TITLE = Component.translatable("gui.skincloset.title");
-    private static final Component EDITING_TITLE = Component.translatable("gui.skincloset.editing");
-    private static final Component ADD_BY_NAME_TITLE = Component.translatable("gui.skincloset.add_by_name");
-    private static final Component ADD_FROM_LOCAL_TITLE = Component.translatable("gui.skincloset.add_from_local");
+    // --- モダンUIレイアウト定数 ---
+    private static final int SIDEBAR_WIDTH = 100;
+    private static final int CONTENT_PADDING = 10;
+    private static final int SKIN_GRID_WIDTH = 100;
+    private static final int SKIN_GRID_HEIGHT = 150;
+    private static final int SKIN_GRID_COLS = 3;
+    private static final int SKIN_GRID_ROWS = 2;
+    // ----------------------------
 
     private enum State {
         LIST,
@@ -38,12 +42,11 @@ public class SkinClosetScreen extends Screen {
 
     // --- LIST State ---
     private int currentPage = 0;
-    private int skinsPerPage = 3;
+    private int skinsPerPage = SKIN_GRID_COLS * SKIN_GRID_ROWS; // 6
     private int totalPages = 0;
 
     // --- EDITING State ---
     private SkinProfile selectedProfile;
-    private PlayerPreviewWidget editingPreview;
     private EditBox nameEditBox;
 
     // --- ADD State ---
@@ -51,7 +54,7 @@ public class SkinClosetScreen extends Screen {
     private Component statusMessage = Component.empty();
 
     public SkinClosetScreen() {
-        super(TITLE);
+        super(Component.translatable("gui.skincloset.title"));
         this.skinProfiles = SkinCache.getProfiles();
     }
 
@@ -62,18 +65,30 @@ public class SkinClosetScreen extends Screen {
         this.skinProfiles = SkinCache.getProfiles();
         this.totalPages = (int) Math.ceil((double) this.skinProfiles.size() / this.skinsPerPage);
 
-        // 現在の状態に応じてGUIを構築
+        // 1. サイドバーを常に描画
+        buildSidebarWidgets();
+
+        // 2. メインコンテンツを状態に応じて描画
         switch (this.currentState) {
             case LIST:
+                this.title = Component.translatable("gui.skincloset.title");
                 buildListWidgets();
                 break;
             case EDITING:
+                if (this.selectedProfile == null) { // 安全対策
+                    this.currentState = State.LIST;
+                    this.init();
+                    return;
+                }
+                this.title = Component.translatable("gui.skincloset.editing", this.selectedProfile.getName());
                 buildEditingWidgets();
                 break;
             case ADD_BY_NAME:
+                this.title = Component.translatable("gui.skincloset.add_by_name");
                 buildAddByNameWidgets();
                 break;
             case ADD_FROM_LOCAL:
+                this.title = Component.translatable("gui.skincloset.add_from_local");
                 buildAddFromLocalWidgets();
                 break;
         }
@@ -81,120 +96,138 @@ public class SkinClosetScreen extends Screen {
 
     // --- Widget Builders ---
 
-    private void buildListWidgets() {
-        int centerX = this.width / 2;
-        int topY = this.height / 2 - 80;
-        int listWidth = skinsPerPage * 110; // プレビュー幅100 + マージン10
-        int startX = centerX - (listWidth / 2) + 5; // リストの開始X座標
+    private void buildSidebarWidgets() {
+        int xPos = CONTENT_PADDING;
+        int yPos = 30; // タイトルの下
 
-        // 1. プレビューの表示
+        // 「自分のスキンを追加」ボタン (新機能)
+        this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.add_my_skin"), (button) -> {
+            addPlayerCurrentSkin();
+        }).bounds(xPos, yPos, SIDEBAR_WIDTH - (CONTENT_PADDING * 2), 20).build());
+
+        yPos += 25;
+
+        // 「名前で追加」ボタン
+        this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.add_by_name"), (button) -> {
+            this.currentState = State.ADD_BY_NAME;
+            this.statusMessage = Component.empty();
+            this.init();
+        }).bounds(xPos, yPos, SIDEBAR_WIDTH - (CONTENT_PADDING * 2), 20).build());
+
+        yPos += 25;
+
+        // 「ローカルから追加」ボタン
+        this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.add_from_local"), (button) -> {
+            this.currentState = State.ADD_FROM_LOCAL;
+            this.statusMessage = Component.translatable("gui.skincloset.local.info");
+            this.init();
+        }).bounds(xPos, yPos, SIDEBAR_WIDTH - (CONTENT_PADDING * 2), 20).build());
+    }
+
+    private void buildListWidgets() {
+        int contentX = SIDEBAR_WIDTH + CONTENT_PADDING;
+        int contentY = 30; // タイトルの下
+        int skinWithPadding = SKIN_GRID_WIDTH + CONTENT_PADDING;
+        int skinHeightWithPadding = SKIN_GRID_HEIGHT + 25 + 25; // スキン + 編集ボタン + 適用ボタン
+
+        // 1. グリッドでスキンを表示
         int startIndex = currentPage * skinsPerPage;
         for (int i = 0; i < skinsPerPage; i++) {
             int profileIndex = startIndex + i;
             if (profileIndex >= this.skinProfiles.size()) break; // リストの終端
 
             SkinProfile profile = this.skinProfiles.get(profileIndex);
-            int xPos = startX + (i * 110);
-            int yPos = topY + 20;
+
+            int col = i % SKIN_GRID_COLS;
+            int row = i / SKIN_GRID_COLS;
+
+            int xPos = contentX + (col * skinWithPadding);
+            int yPos = contentY + (row * skinHeightWithPadding);
 
             // プレビューウィジェット
-            PlayerPreviewWidget preview = new PlayerPreviewWidget(xPos, yPos, 100, 150, profile.getGameProfile());
+            PlayerPreviewWidget preview = new PlayerPreviewWidget(xPos, yPos, SKIN_GRID_WIDTH, SKIN_GRID_HEIGHT, profile.getGameProfile());
             this.addRenderableWidget(preview);
 
             // 編集ボタン
-            this.addRenderableWidget(Button.builder(Component.literal(profile.getName()), (button) -> {
+            this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.edit"), (button) -> {
                 this.selectedProfile = profile;
                 this.currentState = State.EDITING;
                 this.init(); // GUI再構築
-            }).bounds(xPos + 5, yPos + 155, 90, 20).build());
+            }).bounds(xPos, yPos + SKIN_GRID_HEIGHT + 5, SKIN_GRID_WIDTH, 20).build());
+
+            // 適用ボタン (新レイアウト)
+            this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.apply"), (button) -> {
+                applySkin(profile);
+            }).bounds(xPos, yPos + SKIN_GRID_HEIGHT + 30, SKIN_GRID_WIDTH, 20).build());
         }
 
         // 2. ページネーションボタン
+        int paginationY = this.height - 30;
+        int paginationX = SIDEBAR_WIDTH + (this.width - SIDEBAR_WIDTH) / 2;
+
         if (currentPage > 0) {
             this.addRenderableWidget(Button.builder(Component.literal("< Prev"), (button) -> {
                 this.currentPage--;
                 this.init();
-            }).bounds(startX - 50, topY + 80, 40, 20).build());
+            }).bounds(paginationX - 85, paginationY, 80, 20).build());
         }
         if (currentPage < totalPages - 1) {
             this.addRenderableWidget(Button.builder(Component.literal("Next >"), (button) -> {
                 this.currentPage++;
                 this.init();
-            }).bounds(startX + listWidth + 10, topY + 80, 40, 20).build());
+            }).bounds(paginationX + 5, paginationY, 80, 20).build());
         }
-
-        // 3. 追加ボタン
-        int buttonY = this.height / 2 + 100;
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.add_by_name"), (button) -> {
-            this.currentState = State.ADD_BY_NAME;
-            this.statusMessage = Component.empty();
-            this.init();
-        }).bounds(centerX - 155, buttonY, 150, 20).build());
-
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.add_from_local"), (button) -> {
-            this.currentState = State.ADD_FROM_LOCAL;
-            this.statusMessage = Component.translatable("gui.skincloset.local.info");
-            this.init();
-        }).bounds(centerX + 5, buttonY, 150, 20).build());
     }
 
     private void buildEditingWidgets() {
-        if (this.selectedProfile == null) {
-            this.currentState = State.LIST;
-            this.init();
-            return;
-        }
+        int contentX = SIDEBAR_WIDTH + CONTENT_PADDING;
+        int contentY = 30; // タイトルの下
+        int previewSize = 250;
 
-        int centerX = this.width / 2;
-        int topY = this.height / 2 - 80;
+        // 左側にプレビュー
+        PlayerPreviewWidget preview = new PlayerPreviewWidget(contentX, contentY, previewSize, previewSize, selectedProfile.getGameProfile());
+        this.addRenderableWidget(preview);
 
-        // プレビュー
-        this.editingPreview = new PlayerPreviewWidget(centerX - 75, topY, 150, 250, selectedProfile.getGameProfile());
-        this.addRenderableWidget(this.editingPreview);
+        // 右側にオプション
+        int optionsX = contentX + previewSize + CONTENT_PADDING;
+        int optionsY = contentY;
+        int optionsWidth = 150;
 
         // 名前変更
-        this.nameEditBox = new EditBox(this.font, centerX + 90, topY + 20, 100, 20, Component.translatable("gui.skincloset.profile_name"));
+        this.nameEditBox = new EditBox(this.font, optionsX, optionsY + 20, optionsWidth, 20, Component.translatable("gui.skincloset.profile_name"));
         this.nameEditBox.setValue(selectedProfile.getName());
         this.addRenderableWidget(this.nameEditBox);
 
-        // ボタン
-        int buttonX = centerX - 75;
-        int buttonY = topY + 250 + 10;
+        this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.save_name"), (button) -> {
+            saveName();
+        }).bounds(optionsX, optionsY + 45, optionsWidth, 20).build());
+
+        optionsY += 75; // スペース
 
         // 適用ボタン
         this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.apply"), (button) -> {
-            Optional<SkinProfile.SkinData> data = selectedProfile.getSkinData();
-            if (data.isPresent()) {
-                PacketRegistry.CHANNEL.sendToServer(new C2SChangeSkinPacket(data.get().value(), data.get().signature()));
-                this.minecraft.player.sendSystemMessage(Component.translatable("gui.skincloset.applied", selectedProfile.getName()));
-                this.onClose(); // 適用したら閉じる
-            }
-        }).bounds(buttonX, buttonY, 150, 20).build());
+            applySkin(selectedProfile);
+        }).bounds(optionsX, optionsY, optionsWidth, 20).build());
 
-        // 名前保存ボタン
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.save_name"), (button) -> {
-            String newName = this.nameEditBox.getValue();
-            if (newName != null && !newName.trim().isEmpty() && !newName.equals(selectedProfile.getName())) {
-                selectedProfile.setName(newName);
-                SkinCache.saveProfiles();
-                this.minecraft.player.sendSystemMessage(Component.translatable("gui.skincloset.name_saved", newName));
-            }
-        }).bounds(centerX + 90, topY + 45, 100, 20).build());
+        optionsY += 25;
 
+        // ダウンロードボタン
+        this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.download"), (button) -> {
+            downloadSkin();
+        }).bounds(optionsX, optionsY, optionsWidth, 20).build());
 
-        // 削除ボタン
+        optionsY += 25;
+
+        // 削除ボタン (赤文字)
         this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.delete"), (button) -> {
             SkinCache.removeProfile(selectedProfile);
             SkinCache.saveProfiles();
             this.selectedProfile = null;
             this.currentState = State.LIST;
             this.init();
-        }).bounds(centerX + 90, topY + 75, 100, 20).build());
-
-        // ダウンロードボタン
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.download"), (button) -> {
-            downloadSkin();
-        }).bounds(centerX + 90, topY + 100, 100, 20).build());
+        }).build()).updateMessage(Component.translatable("gui.skincloset.delete").withStyle(s -> s.withColor(0xFF5555)));
+        this.getLastAddedWidget().setPosition(optionsX, optionsY);
+        this.getLastAddedWidget().setWidth(optionsWidth);
 
 
         // 戻るボタン
@@ -202,48 +235,93 @@ public class SkinClosetScreen extends Screen {
             this.selectedProfile = null;
             this.currentState = State.LIST;
             this.init();
-        }).bounds(10, 10, 60, 20).build());
+        }).bounds(optionsX, this.height - 40, optionsWidth, 20).build());
     }
 
     private void buildAddByNameWidgets() {
-        int centerX = this.width / 2;
-        int centerY = this.height / 2;
+        int contentX = SIDEBAR_WIDTH + (this.width - SIDEBAR_WIDTH) / 2 - 100;
+        int contentY = this.height / 2 - 20;
 
-        this.inputEditBox = new EditBox(this.font, centerX - 100, centerY - 10, 200, 20, Component.translatable("gui.skincloset.username"));
+        this.inputEditBox = new EditBox(this.font, contentX, contentY, 200, 20, Component.translatable("gui.skincloset.username"));
         this.addRenderableWidget(this.inputEditBox);
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.fetch"), (button) -> {
             fetchSkinByName(this.inputEditBox.getValue());
-        }).bounds(centerX - 100, centerY + 20, 200, 20).build());
+        }).bounds(contentX, contentY + 25, 200, 20).build());
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.back"), (button) -> {
             this.currentState = State.LIST;
             this.statusMessage = Component.empty();
             this.init();
-        }).bounds(10, 10, 60, 20).build());
+        }).bounds(contentX, contentY + 50, 200, 20).build());
     }
 
     private void buildAddFromLocalWidgets() {
-        int centerX = this.width / 2;
-        int centerY = this.height / 2;
+        int contentX = SIDEBAR_WIDTH + (this.width - SIDEBAR_WIDTH) / 2 - 100;
+        int contentY = this.height / 2 - 20;
 
-        this.inputEditBox = new EditBox(this.font, centerX - 100, centerY - 10, 200, 20, Component.translatable("gui.skincloset.profile_name"));
+        this.inputEditBox = new EditBox(this.font, contentX, contentY, 200, 20, Component.translatable("gui.skincloset.profile_name"));
         this.inputEditBox.setHint(Component.translatable("gui.skincloset.local.hint")); // "example.png"
         this.addRenderableWidget(this.inputEditBox);
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.upload"), (button) -> {
             uploadSkinFromLocal(this.inputEditBox.getValue());
-        }).bounds(centerX - 100, centerY + 20, 200, 20).build());
+        }).bounds(contentX, contentY + 25, 200, 20).build());
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.skincloset.back"), (button) -> {
             this.currentState = State.LIST;
             this.statusMessage = Component.empty();
             this.init();
-        }).bounds(10, 10, 60, 20).build());
+        }).bounds(contentX, contentY + 50, 200, 20).build());
     }
 
 
     // --- Logic ---
+
+    private void applySkin(SkinProfile profile) {
+        if (profile == null) return;
+        Optional<SkinProfile.SkinData> data = profile.getSkinData();
+        if (data.isPresent()) {
+            PacketRegistry.CHANNEL.sendToServer(new C2SChangeSkinPacket(data.get().value(), data.get().signature()));
+            this.minecraft.player.sendSystemMessage(Component.translatable("gui.skincloset.applied", profile.getName()));
+            this.onClose(); // 適用したら閉じる
+        }
+    }
+
+    private void saveName() {
+        if (this.selectedProfile == null || this.nameEditBox == null) return;
+
+        String newName = this.nameEditBox.getValue();
+        if (newName != null && !newName.trim().isEmpty() && !newName.equals(selectedProfile.getName())) {
+            selectedProfile.setName(newName);
+            SkinCache.saveProfiles();
+            this.minecraft.player.sendSystemMessage(Component.translatable("gui.skincloset.name_saved", newName));
+            this.title = Component.translatable("gui.skincloset.editing", this.selectedProfile.getName());
+        }
+    }
+
+    private void addPlayerCurrentSkin() {
+        try {
+            GameProfile profile = this.minecraft.getUser().getProfile();
+            Optional<Property> textures = profile.getProperties().get("textures").stream().findFirst();
+
+            textures.ifPresentOrElse(
+                    (texture) -> {
+                        SkinProfile newProfile = new SkinProfile(profile.getName(), profile.getId(), texture.getValue(), texture.getSignature());
+                        SkinCache.addProfile(newProfile);
+                        SkinCache.saveProfiles();
+                        this.statusMessage = Component.translatable("gui.skincloset.success.added_self");
+                        this.currentState = State.LIST;
+                        this.init();
+                    },
+                    () -> {
+                        this.statusMessage = Component.translatable("gui.skincloset.error.self_no_skin");
+                    }
+            );
+        } catch (Exception e) {
+            this.statusMessage = Component.translatable("gui.skincloset.error.self_no_skin");
+        }
+    }
 
     private void fetchSkinByName(String username) {
         if (username == null || username.trim().isEmpty()) {
@@ -251,6 +329,7 @@ public class SkinClosetScreen extends Screen {
             return;
         }
         this.statusMessage = Component.translatable("gui.skincloset.fetching");
+        this.inputEditBox.setEditable(false); // 処理中は編集不可
 
         SkinDownloader.fetchSkinByUsername(username, (profile) -> {
             if (profile != null) {
@@ -258,9 +337,11 @@ public class SkinClosetScreen extends Screen {
                 SkinCache.saveProfiles();
                 this.statusMessage = Component.translatable("gui.skincloset.success.added", profile.getName());
                 this.currentState = State.LIST;
-                this.init();
+                // GUIの更新はメインスレッドで行う
+                this.minecraft.execute(this::init);
             } else {
                 this.statusMessage = Component.translatable("gui.skincloset.error.not_found", username);
+                this.inputEditBox.setEditable(true);
             }
         });
     }
@@ -274,12 +355,13 @@ public class SkinClosetScreen extends Screen {
         String fileName = profileName.endsWith(".png") ? profileName : profileName + ".png";
         Path localSkinPath = SkinCache.UPLOADS_DIR.resolve(fileName);
 
-        if (!Files.exists(localSkinPath)) { // Files をインポート
+        if (!Files.exists(localSkinPath)) {
             this.statusMessage = Component.translatable("gui.skincloset.error.local_not_found", fileName);
             return;
         }
 
         this.statusMessage = Component.translatable("gui.skincloset.uploading");
+        this.inputEditBox.setEditable(false); // 処理中は編集不可
 
         SkinDownloader.uploadSkinFromLocal(profileName, localSkinPath, (profile) -> {
             if (profile != null) {
@@ -287,9 +369,11 @@ public class SkinClosetScreen extends Screen {
                 SkinCache.saveProfiles();
                 this.statusMessage = Component.translatable("gui.skincloset.success.uploaded", profile.getName());
                 this.currentState = State.LIST;
-                this.init();
+                // GUIの更新はメインスレッドで行う
+                this.minecraft.execute(this::init);
             } else {
                 this.statusMessage = Component.translatable("gui.skincloset.error.upload_failed");
+                this.inputEditBox.setEditable(true);
             }
         });
     }
@@ -298,17 +382,17 @@ public class SkinClosetScreen extends Screen {
         if (this.selectedProfile == null) return;
 
         Optional<String> urlOpt = this.selectedProfile.getTextureUrl();
-        if(urlOpt.isEmpty()) {
+        if (urlOpt.isEmpty()) {
             this.minecraft.player.sendSystemMessage(Component.translatable("gui.skincloset.error.no_texture"));
             return;
         }
 
         Path downloadsDir = Path.of(System.getProperty("user.home"), "Downloads");
-        String fileName = this.selectedProfile.getName() + ".png";
+        String fileName = this.selectedProfile.getName().replaceAll("[^a-zA-Z0-9.-]", "_") + ".png";
         Path targetPath = downloadsDir.resolve(fileName);
 
         SkinDownloader.downloadSkinTexture(urlOpt.get(), targetPath, (success) -> {
-            if(success) {
+            if (success) {
                 this.minecraft.player.sendSystemMessage(Component.translatable("gui.skincloset.success.downloaded", fileName));
             } else {
                 this.minecraft.player.sendSystemMessage(Component.translatable("gui.skincloset.error.download_failed"));
@@ -320,36 +404,35 @@ public class SkinClosetScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // 背景を半透明の黒にする
-        this.renderBackground(graphics); // 1.20.1では引数がGuiGraphicsのみ
+        // --- 修正: ぼかし背景をレンダリング ---
+        this.renderBackground(graphics);
 
-        // タイトル
-        Component currentTitle = switch (this.currentState) {
-            case LIST -> TITLE;
-            case EDITING -> Component.translatable("gui.skincloset.editing", this.selectedProfile.getName());
-            case ADD_BY_NAME -> ADD_BY_NAME_TITLE;
-            case ADD_FROM_LOCAL -> ADD_FROM_LOCAL_TITLE;
-        };
-        graphics.drawCenteredString(this.font, currentTitle, this.width / 2, 15, 0xFFFFFF);
-
-        // ステータスメッセージ
-        if (this.currentState == State.ADD_BY_NAME || this.currentState == State.ADD_FROM_LOCAL) {
-            graphics.drawCenteredString(this.font, this.statusMessage, this.width / 2, this.height / 2 + 50, 0xFFFF55);
-        }
+        // サイドバーの背景を描画
+        graphics.fill(0, 0, SIDEBAR_WIDTH, this.height, 0x80000000); // 半透明の黒
 
         // ウィジェット（ボタン、プレビューなど）を描画
         super.render(graphics, mouseX, mouseY, partialTick);
 
+        // タイトル
+        graphics.drawCenteredString(this.font, this.title, this.width / 2, 10, 0xFFFFFF);
+
+        // ステータスメッセージ
+        if (this.currentState == State.ADD_BY_NAME || this.currentState == State.ADD_FROM_LOCAL) {
+            int contentX = SIDEBAR_WIDTH + (this.width - SIDEBAR_WIDTH) / 2;
+            graphics.drawCenteredString(this.font, this.statusMessage, contentX, this.height / 2 + 50, 0xFFFF55);
+        }
+
         // ページ番号
         if (this.currentState == State.LIST && this.totalPages > 0) {
-            String pageText = String.format("Page %d / %d", this.currentPage + 1, this.totalPages);
-            graphics.drawCenteredString(this.font, pageText, this.width / 2, this.height / 2 + 125, 0xFFFFFF);
+            String pageText = Component.translatable("gui.skincloset.page", this.currentPage + 1, this.totalPages).getString();
+            int paginationX = SIDEBAR_WIDTH + (this.width - SIDEBAR_WIDTH) / 2;
+            graphics.drawCenteredString(this.font, pageText, paginationX - 35, this.height - 25, 0xFFFFFF);
         }
     }
 
     @Override
     public boolean isPauseScreen() {
+        // falseを返すことで、シングルプレイ時にゲームが停止しないようにする
         return false;
     }
 }
-
