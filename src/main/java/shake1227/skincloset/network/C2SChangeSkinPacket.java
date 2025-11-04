@@ -30,7 +30,6 @@ public class C2SChangeSkinPacket {
     }
 
     public static void encode(C2SChangeSkinPacket pkt, FriendlyByteBuf buf) {
-        // ★ 修正: ログ の NullPointerException を防ぐ
         buf.writeUtf(pkt.value != null ? pkt.value : "");
         buf.writeUtf(pkt.signature != null ? pkt.signature : "");
     }
