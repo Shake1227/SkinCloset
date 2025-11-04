@@ -58,7 +58,7 @@ public class SkinCache {
         if (profiles.stream().noneMatch(p ->
                 p.getUuid().equals(profile.getUuid()) &&
                         p.getName().equals(profile.getName()) &&
-                        p.getSkinData().map(sd -> sd.signature()).equals(profile.getSkinData().map(sd -> sd.signature()))
+                        p.getSkinData().map(SkinProfile.SkinData::signature).equals(profile.getSkinData().map(SkinProfile.SkinData::signature))
         )) {
             profiles.add(profile);
         }

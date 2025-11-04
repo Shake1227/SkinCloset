@@ -157,8 +157,6 @@ public class SkinClosetScreen extends Screen {
             this.statusMessage = Component.empty();
             this.init();
         }).bounds(xPos, yPos, width, height).build());
-
-        // ★ 修正: ランチャーからインポートボタンを削除
     }
 
     private void buildListWidgets() {
@@ -580,7 +578,7 @@ public class SkinClosetScreen extends Screen {
                     this.font,
                     profile.getName(),
                     (int)((xPos + (V_PREVIEW_WIDTH / 2)) / GENERAL_TEXT_SCALE),
-                    (int)((yPos + 50) / GENERAL_TEXT_SCALE), // ★ あなたの設定
+                    (int)((yPos + 50) / GENERAL_TEXT_SCALE),
                     0xFFFFFF
             );
             graphics.pose().popPose();
@@ -601,7 +599,7 @@ public class SkinClosetScreen extends Screen {
                 this.font,
                 this.selectedProfile.getName(),
                 (int)((previewX + (previewWidth / 2)) / GENERAL_TEXT_SCALE),
-                (int)((nameY + 50) / GENERAL_TEXT_SCALE), // ★ あなたの設定
+                (int)((nameY + 50) / GENERAL_TEXT_SCALE),
                 0xFFFFFF
         );
         graphics.pose().popPose();

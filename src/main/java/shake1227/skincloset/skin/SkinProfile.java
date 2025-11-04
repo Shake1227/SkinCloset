@@ -17,8 +17,8 @@ public class SkinProfile {
     private String model;
     private transient GameProfile gameProfile;
 
+    public static record SkinData(String value, String signature) {}
 
-    public record SkinData(String value, String signature) {}
     public SkinProfile(String name, UUID uuid, String value, String signature, String model) {
         this.name = name;
         this.uuid = uuid;
