@@ -1,5 +1,7 @@
 package shake1227.skincloset.client.gui;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import com.mojang.authlib.properties.Property;
@@ -15,15 +17,18 @@ import org.lwjgl.util.tinyfd.TinyFileDialogs;
 import shake1227.skincloset.SkinCloset;
 import shake1227.skincloset.network.C2SChangeSkinPacket;
 import shake1227.skincloset.network.PacketRegistry;
+import shake1227.skincloset.skin.LastSkinCache;
 import shake1227.skincloset.skin.SkinCache;
 import shake1227.skincloset.skin.SkinDownloader;
 import shake1227.skincloset.skin.SkinProfile;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 public class SkinClosetScreen extends Screen {
 
@@ -378,6 +383,7 @@ public class SkinClosetScreen extends Screen {
         Optional<SkinProfile.SkinData> data = profile.getSkinData();
         if (data.isPresent()) {
             PacketRegistry.CHANNEL.sendToServer(new C2SChangeSkinPacket(data.get().value(), data.get().signature()));
+            LastSkinCache.save(profile);
             this.minecraft.player.sendSystemMessage(Component.translatable("gui.skincloset.applied", profile.getName()));
             this.onClose();
         }
@@ -397,23 +403,17 @@ public class SkinClosetScreen extends Screen {
     private void addPlayerCurrentSkin() {
         try {
             GameProfile profile = this.minecraft.player.getGameProfile();
+            String username = profile.getName();
 
-            Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> map = this.minecraft.getSkinManager().getInsecureSkinInformation(profile);
-            if (!map.containsKey(MinecraftProfileTexture.Type.SKIN)) {
+            if (username == null || username.trim().isEmpty()) {
                 this.statusMessage = Component.translatable("gui.skincloset.error.self_no_skin");
                 return;
             }
 
-            String skinUrl = map.get(MinecraftProfileTexture.Type.SKIN).getUrl();
-            String profileName = profile.getName();
-
-            SkinCloset.LOGGER.info("Attempting to add current skin for {} from URL: {}", profileName, skinUrl);
-
-            this.statusMessage = Component.translatable("gui.skincloset.uploading");
-
+            this.statusMessage = Component.translatable("gui.skincloset.fetching");
             this.renderables.forEach(w -> { if (w instanceof Button b) b.active = false; });
 
-            SkinDownloader.uploadSkinFromUrl(profileName, skinUrl, (newProfile) -> {
+            SkinDownloader.fetchSkinByUsername(username, (newProfile) -> {
                 if (newProfile != null) {
                     SkinCache.addProfile(newProfile);
                     SkinCache.saveProfiles();
@@ -421,14 +421,15 @@ public class SkinClosetScreen extends Screen {
                     this.currentState = State.LIST;
                     this.minecraft.execute(this::init);
                 } else {
-                    this.statusMessage = Component.translatable("gui.skincloset.error.upload_failed");
+                    this.statusMessage = Component.translatable("gui.skincloset.error.self_no_skin");
                     this.minecraft.execute(this::init);
                 }
             });
 
         } catch (Exception e) {
-            SkinCloset.LOGGER.error("Failed to add player current skin", e);
+            SkinCloset.LOGGER.error("Failed to get player username for addPlayerCurrentSkin", e);
             this.statusMessage = Component.translatable("gui.skincloset.error.self_no_skin");
+            this.init();
         }
     }
 
@@ -438,7 +439,9 @@ public class SkinClosetScreen extends Screen {
             return;
         }
         this.statusMessage = Component.translatable("gui.skincloset.fetching");
-        this.inputEditBox.setEditable(false);
+        if(this.inputEditBox != null) {
+            this.inputEditBox.setEditable(false);
+        }
         this.renderables.forEach(w -> { if (w instanceof Button b) b.active = false; });
 
         SkinDownloader.fetchSkinByUsername(username, (profile) -> {
