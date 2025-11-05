@@ -11,8 +11,6 @@ import shake1227.skincloset.client.gui.SkinClosetScreen;
 import shake1227.skincloset.network.C2SChangeSkinPacket;
 import shake1227.skincloset.network.PacketRegistry;
 import shake1227.skincloset.skin.LastSkinCache;
-
-@Mod.EventBusSubscriber(Dist.CLIENT)
 public class ClientEvents {
 
     @SubscribeEvent

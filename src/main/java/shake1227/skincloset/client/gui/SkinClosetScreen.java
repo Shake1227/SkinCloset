@@ -21,6 +21,10 @@ import shake1227.skincloset.skin.LastSkinCache;
 import shake1227.skincloset.skin.SkinCache;
 import shake1227.skincloset.skin.SkinDownloader;
 import shake1227.skincloset.skin.SkinProfile;
+import net.minecraft.ChatFormatting;
+import shake1227.skincloset.compat.ModernNotificationCompat;
+import shake1227.modernnotification.core.NotificationCategory;
+
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -133,6 +137,21 @@ public class SkinClosetScreen extends Screen {
                 this.currentTitle = Component.translatable("gui.skincloset.add_from_local");
                 buildAddFromLocalWidgets();
                 break;
+        }
+    }
+    private void sendFeedback(Component message, NotificationCategory category) {
+        if (SkinCloset.isModernNotificationLoaded) {
+            ModernNotificationCompat.sendNotification(category, message);
+        } else {
+            if (category == NotificationCategory.FAILURE) {
+                this.statusMessage = message.copy().withStyle(ChatFormatting.RED);
+            } else if (category == NotificationCategory.SYSTEM) {
+                this.statusMessage = message.copy().withStyle(ChatFormatting.YELLOW);
+            } else {
+                if (this.minecraft != null && this.minecraft.player != null) {
+                    this.minecraft.player.displayClientMessage(message, false);
+                }
+            }
         }
     }
 
@@ -337,14 +356,14 @@ public class SkinClosetScreen extends Screen {
         String newModel = this.selectedProfile.isSlim() ? "classic" : "slim";
         this.selectedProfile.setModel(newModel);
         SkinCache.saveProfiles();
-        this.minecraft.player.sendSystemMessage(Component.translatable("gui.skincloset.model_switched", newModel));
+        sendFeedback(Component.translatable("gui.skincloset.model_switched", newModel), NotificationCategory.SUCCESS);
         this.init();
     }
 
     private void openFilePicker() {
         String profileName = this.inputEditBox.getValue();
         if (profileName == null || profileName.trim().isEmpty()) {
-            this.statusMessage = Component.translatable("gui.skincloset.error.no_profile_name");
+            sendFeedback(Component.translatable("gui.skincloset.error.no_profile_name"), NotificationCategory.FAILURE);
             return;
         }
 
@@ -384,7 +403,7 @@ public class SkinClosetScreen extends Screen {
         if (data.isPresent()) {
             PacketRegistry.CHANNEL.sendToServer(new C2SChangeSkinPacket(data.get().value(), data.get().signature()));
             LastSkinCache.save(profile);
-            this.minecraft.player.sendSystemMessage(Component.translatable("gui.skincloset.applied", profile.getName()));
+            sendFeedback(Component.translatable("gui.skincloset.applied", profile.getName()), NotificationCategory.SUCCESS);
             this.onClose();
         }
     }
@@ -395,7 +414,7 @@ public class SkinClosetScreen extends Screen {
         if (newName != null && !newName.trim().isEmpty() && !newName.equals(selectedProfile.getName())) {
             selectedProfile.setName(newName);
             SkinCache.saveProfiles();
-            this.minecraft.player.sendSystemMessage(Component.translatable("gui.skincloset.name_saved", newName));
+            sendFeedback(Component.translatable("gui.skincloset.name_saved", newName), NotificationCategory.SUCCESS);
             this.currentTitle = Component.translatable("gui.skincloset.editing", this.selectedProfile.getName());
         }
     }
@@ -406,39 +425,42 @@ public class SkinClosetScreen extends Screen {
             String username = profile.getName();
 
             if (username == null || username.trim().isEmpty()) {
-                this.statusMessage = Component.translatable("gui.skincloset.error.self_no_skin");
+                sendFeedback(Component.translatable("gui.skincloset.error.self_no_skin"), NotificationCategory.FAILURE);
                 return;
             }
-
-            this.statusMessage = Component.translatable("gui.skincloset.fetching");
+            sendFeedback(Component.translatable("gui.skincloset.fetching"), NotificationCategory.SYSTEM);
             this.renderables.forEach(w -> { if (w instanceof Button b) b.active = false; });
 
             SkinDownloader.fetchSkinByUsername(username, (newProfile) -> {
                 if (newProfile != null) {
                     SkinCache.addProfile(newProfile);
                     SkinCache.saveProfiles();
-                    this.statusMessage = Component.translatable("gui.skincloset.success.added_self");
-                    this.currentState = State.LIST;
-                    this.minecraft.execute(this::init);
+                    this.minecraft.execute(() -> {
+                        this.currentState = State.LIST;
+                        this.init();
+                        sendFeedback(Component.translatable("gui.skincloset.success.added_self"), NotificationCategory.SUCCESS);
+                    });
                 } else {
-                    this.statusMessage = Component.translatable("gui.skincloset.error.self_no_skin");
-                    this.minecraft.execute(this::init);
+                    this.minecraft.execute(() -> {
+                        sendFeedback(Component.translatable("gui.skincloset.error.self_no_skin"), NotificationCategory.FAILURE);
+                        this.init();
+                    });
                 }
             });
 
         } catch (Exception e) {
             SkinCloset.LOGGER.error("Failed to get player username for addPlayerCurrentSkin", e);
-            this.statusMessage = Component.translatable("gui.skincloset.error.self_no_skin");
+            sendFeedback(Component.translatable("gui.skincloset.error.self_no_skin"), NotificationCategory.FAILURE);
             this.init();
         }
     }
 
     private void fetchSkinByName(String username) {
         if (username == null || username.trim().isEmpty()) {
-            this.statusMessage = Component.translatable("gui.skincloset.error.no_name");
+            sendFeedback(Component.translatable("gui.skincloset.error.no_name"), NotificationCategory.FAILURE);
             return;
         }
-        this.statusMessage = Component.translatable("gui.skincloset.fetching");
+        sendFeedback(Component.translatable("gui.skincloset.fetching"), NotificationCategory.SYSTEM);
         if(this.inputEditBox != null) {
             this.inputEditBox.setEditable(false);
         }
@@ -448,28 +470,31 @@ public class SkinClosetScreen extends Screen {
             if (profile != null) {
                 SkinCache.addProfile(profile);
                 SkinCache.saveProfiles();
-                this.statusMessage = Component.translatable("gui.skincloset.success.added", profile.getName());
-                this.currentState = State.LIST;
-                this.minecraft.execute(this::init);
+                this.minecraft.execute(() -> {
+                    this.currentState = State.LIST;
+                    this.init();
+                    sendFeedback(Component.translatable("gui.skincloset.success.added", profile.getName()), NotificationCategory.SUCCESS);
+                });
             } else {
-                this.statusMessage = Component.translatable("gui.skincloset.error.not_found", username);
-                this.minecraft.execute(this::init);
+                this.minecraft.execute(() -> {
+                    sendFeedback(Component.translatable("gui.skincloset.error.not_found", username), NotificationCategory.FAILURE);
+                    this.init();
+                });
             }
         });
     }
 
     private void uploadSkinFromLocal(String profileName, Path localSkinPath) {
         if (profileName == null || profileName.trim().isEmpty()) {
-            this.statusMessage = Component.translatable("gui.skincloset.error.no_profile_name");
+            sendFeedback(Component.translatable("gui.skincloset.error.no_profile_name"), NotificationCategory.FAILURE);
             return;
         }
 
         if (!Files.exists(localSkinPath)) {
-            this.statusMessage = Component.translatable("gui.skincloset.error.local_not_found_generic");
+            sendFeedback(Component.translatable("gui.skincloset.error.local_not_found_generic"), NotificationCategory.FAILURE);
             return;
         }
-
-        this.statusMessage = Component.translatable("gui.skincloset.uploading");
+        sendFeedback(Component.translatable("gui.skincloset.uploading"), NotificationCategory.SYSTEM);
         if (this.inputEditBox != null) {
             this.inputEditBox.setEditable(false);
         }
@@ -480,13 +505,17 @@ public class SkinClosetScreen extends Screen {
             if (profile != null) {
                 SkinCache.addProfile(profile);
                 SkinCache.saveProfiles();
-                this.statusMessage = Component.translatable("gui.skincloset.success.uploaded", profile.getName());
-                this.currentState = State.LIST;
-                this.minecraft.execute(this::init);
+                this.minecraft.execute(() -> {
+                    this.currentState = State.LIST;
+                    this.init();
+                    sendFeedback(Component.translatable("gui.skincloset.success.uploaded", profile.getName()), NotificationCategory.SUCCESS);
+                });
             } else {
-                this.statusMessage = Component.translatable("gui.skincloset.error.upload_failed");
-                this.currentState = State.ADD_FROM_LOCAL;
-                this.minecraft.execute(this::init);
+                this.minecraft.execute(() -> {
+                    sendFeedback(Component.translatable("gui.skincloset.error.upload_failed"), NotificationCategory.FAILURE);
+                    this.currentState = State.ADD_FROM_LOCAL;
+                    this.init();
+                });
             }
         });
     }
@@ -495,7 +524,7 @@ public class SkinClosetScreen extends Screen {
         if (this.selectedProfile == null) return;
         Optional<String> urlOpt = this.selectedProfile.getTextureUrl();
         if (urlOpt.isEmpty()) {
-            this.minecraft.player.sendSystemMessage(Component.translatable("gui.skincloset.error.no_texture"));
+            sendFeedback(Component.translatable("gui.skincloset.error.no_texture"), NotificationCategory.FAILURE);
             return;
         }
 
@@ -505,9 +534,9 @@ public class SkinClosetScreen extends Screen {
 
         SkinDownloader.downloadSkinTexture(urlOpt.get(), targetPath, (success) -> {
             if (success) {
-                this.minecraft.player.sendSystemMessage(Component.translatable("gui.skincloset.success.downloaded", fileName));
+                sendFeedback(Component.translatable("gui.skincloset.success.downloaded", fileName), NotificationCategory.SUCCESS);
             } else {
-                this.minecraft.player.sendSystemMessage(Component.translatable("gui.skincloset.error.download_failed"));
+                sendFeedback(Component.translatable("gui.skincloset.error.download_failed"), NotificationCategory.FAILURE);
             }
         });
     }
@@ -540,8 +569,7 @@ public class SkinClosetScreen extends Screen {
         } else if (this.currentState == State.EDITING && this.selectedProfile != null) {
             renderEditingSkinName(graphics);
         }
-
-        if (this.currentState == State.ADD_BY_NAME || this.currentState == State.ADD_FROM_LOCAL) {
+        if (!SkinCloset.isModernNotificationLoaded && (this.currentState == State.ADD_BY_NAME || this.currentState == State.ADD_FROM_LOCAL)) {
             int statusY = (this.vHeight / 2) + 50;
             graphics.drawCenteredString(this.font, this.statusMessage, this.vContentXCenter, statusY, 0xFFFF55);
         }

@@ -7,7 +7,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import shake1227.skincloset.Constants;
 import org.lwjgl.glfw.GLFW;
-@Mod.EventBusSubscriber(modid = Constants.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class Keybinds {
     public static final String KEY_CATEGORY_SKINCLOSET = "key.category.skincloset";
     public static final String KEY_OPEN_GUI = "key.skincloset.open_gui";
@@ -23,4 +22,3 @@ public class Keybinds {
         event.register(OPEN_GUI_KEY);
     }
 }
-
