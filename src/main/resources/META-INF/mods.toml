@@ -9,6 +9,7 @@ displayName = "${mod_name}"
 displayURL = "https.x.com/Shake_1227"
 authors = "${mod_authors}"
 description = '''${mod_description}'''
+logoFile="skincloset.png"
 
 [[dependencies."${mod_id}"]]
 modId = "forge"
@@ -24,7 +25,6 @@ versionRange = "${minecraft_version_range}"
 ordering = "NONE"
 side = "BOTH"
 
-# 修正: ModernNotification への「オプション」依存関係を追加
 [[dependencies."${mod_id}"]]
 modId = "modernnotification"
 mandatory = false
