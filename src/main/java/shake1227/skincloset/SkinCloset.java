@@ -22,6 +22,11 @@ import shake1227.skincloset.core.ClientEvents;
 import shake1227.skincloset.network.PacketRegistry;
 import shake1227.skincloset.skin.SkinCache;
 
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.config.ModConfig;
+import shake1227.skincloset.config.ServerConfig;
+
+
 @Mod(Constants.MOD_ID)
 public class SkinCloset {
 
@@ -38,6 +43,8 @@ public class SkinCloset {
             modEventBus.addListener(this::clientSetup);
             ClientOnlySetup.registerClientEvents(modEventBus);
         });
+
+        ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC, "skincloset-server.toml");
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {

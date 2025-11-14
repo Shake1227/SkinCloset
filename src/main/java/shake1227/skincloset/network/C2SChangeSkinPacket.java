@@ -19,6 +19,9 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.function.Supplier;
 
+import shake1227.skincloset.config.ServerConfig;
+import net.minecraft.commands.CommandSourceStack;
+
 public class C2SChangeSkinPacket {
 
     private final String value;
@@ -74,6 +77,33 @@ public class C2SChangeSkinPacket {
             sPlayer.inventoryMenu.broadcastChanges();
             sPlayer.getServer().getPlayerList().broadcastAll(new ClientboundPlayerInfoRemovePacket(List.of(sPlayer.getUUID())));
             sPlayer.getServer().getPlayerList().broadcastAll(ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(List.of(sPlayer)));
+
+            try {
+                List<? extends String> consoleCommands = ServerConfig.INSTANCE.consoleCommand.get();
+                List<? extends String> playerCommands = ServerConfig.INSTANCE.playerCommand.get();
+                String playerName = player.getName().getString();
+                String playerUUID = player.getUUID().toString();
+
+                if (consoleCommands != null && !consoleCommands.isEmpty()) {
+                    CommandSourceStack consoleSource = player.getServer().createCommandSourceStack();
+                    for (String cmd : consoleCommands) {
+                        if (cmd == null || cmd.isBlank()) continue;
+                        String processedCmd = cmd.replace("@p", playerName).replace("@u", playerUUID);
+                        player.getServer().getCommands().performPrefixedCommand(consoleSource, processedCmd);
+                    }
+                }
+
+                if (playerCommands != null && !playerCommands.isEmpty()) {
+                    CommandSourceStack playerSource = player.createCommandSourceStack();
+                    for (String cmd : playerCommands) {
+                        if (cmd == null || cmd.isBlank()) continue;
+                        String processedCmd = cmd.replace("@p", playerName).replace("@u", playerUUID);
+                        player.getServer().getCommands().performPrefixedCommand(playerSource, processedCmd);
+                    }
+                }
+            } catch (Exception e) {
+                SkinCloset.LOGGER.error("Failed to execute skin change commands for " + player.getName().getString(), e);
+            }
 
             playerList.sendPlayerPermissionLevel(sPlayer);
             playerList.sendLevelInfo(sPlayer, sPlayer.serverLevel());

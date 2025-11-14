@@ -89,6 +89,9 @@ public class SkinClosetScreen extends Screen {
     private int vSidebarWidth;
     private int vContentXCenter;
 
+    private static long lastApplyTime = 0;
+    private static final long APPLY_COOLDOWN_MS = 5000; // 5秒
+
     public SkinClosetScreen() {
         super(Component.translatable("gui.skincloset.title"));
         this.skinProfiles = SkinCache.getProfiles();
@@ -399,6 +402,14 @@ public class SkinClosetScreen extends Screen {
 
     private void applySkin(SkinProfile profile) {
         if (profile == null) return;
+
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastApplyTime < APPLY_COOLDOWN_MS) {
+            sendFeedback(Component.literal("Please wait 5 seconds before applying another skin."), NotificationCategory.WARNING);
+            return;
+        }
+        lastApplyTime = currentTime;
+
         Optional<SkinProfile.SkinData> data = profile.getSkinData();
         if (data.isPresent()) {
             PacketRegistry.CHANNEL.sendToServer(new C2SChangeSkinPacket(data.get().value(), data.get().signature()));
