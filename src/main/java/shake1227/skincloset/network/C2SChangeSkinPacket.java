@@ -14,6 +14,8 @@ import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.server.players.PlayerList;
 import net.minecraftforge.network.NetworkEvent;
 import shake1227.skincloset.SkinCloset;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -86,12 +88,20 @@ public class C2SChangeSkinPacket {
             ClientboundRemoveEntitiesPacket removePacket = new ClientboundRemoveEntitiesPacket(sPlayer.getId());
             ClientboundAddPlayerPacket addPacket = new ClientboundAddPlayerPacket(sPlayer);
 
+            List<SynchedEntityData.DataValue<?>> entityData = sPlayer.getEntityData().getNonDefaultValues();
+
             for (ServerPlayer otherPlayer : playerList.getPlayers()) {
                 if (otherPlayer.getUUID().equals(sPlayer.getUUID())) {
                     continue;
                 }
                 otherPlayer.connection.send(removePacket);
                 otherPlayer.connection.send(addPacket);
+                if (entityData != null) {
+                    otherPlayer.connection.send(new ClientboundSetEntityDataPacket(sPlayer.getId(), entityData));
+                }
+            }
+            if (entityData != null) {
+                sPlayer.connection.send(new ClientboundSetEntityDataPacket(sPlayer.getId(), entityData));
             }
 
             playerList.sendAllPlayerInfo(sPlayer);

@@ -8,6 +8,8 @@ import net.minecraft.client.Minecraft;
 import shake1227.skincloset.Constants;
 import shake1227.skincloset.SkinCloset;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -58,16 +60,7 @@ public class SkinDownloader {
 
                 String value = textureProp.get("value").getAsString();
                 String signature = textureProp.get("signature").getAsString();
-                String model = "classic";
-                try {
-                    String decodedValue = new String(Base64.getDecoder().decode(value));
-                    JsonObject textureJson = JsonParser.parseString(decodedValue).getAsJsonObject();
-                    if (textureJson.getAsJsonObject("textures").getAsJsonObject("SKIN").has("metadata")) {
-                        model = textureJson.getAsJsonObject("textures").getAsJsonObject("SKIN").getAsJsonObject("metadata").get("model").getAsString();
-                    }
-                } catch (Exception e) {
-                    SkinCloset.LOGGER.warn("Could not determine skin model for {}, defaulting to classic.", actualName);
-                }
+                String model = extractModelFromValue(value);
 
                 SkinCloset.LOGGER.info("Successfully fetched skin for {} (Model: {})", actualName, model);
                 callback.accept(new SkinProfile(actualName, uuid, value, signature, model));
@@ -84,10 +77,13 @@ public class SkinDownloader {
         CompletableFuture.runAsync(() -> {
             try {
                 String boundary = "Boundary-" + System.currentTimeMillis();
+                String detectedModel = detectModel(filePath);
+                SkinCloset.LOGGER.info("Detected model for local file: {}", detectedModel);
+
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(Constants.MINESKIN_API_UPLOAD + "?visibility=1"))
                         .header("Content-Type", "multipart/form-data; boundary=" + boundary)
-                        .POST(ofMimeMultipartData(filePath, boundary, profileName))
+                        .POST(ofMimeMultipartData(filePath, boundary, profileName, detectedModel))
                         .build();
 
                 HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
@@ -101,10 +97,16 @@ public class SkinDownloader {
                     String value = texture.get("value").getAsString();
                     String signature = texture.get("signature").getAsString();
                     UUID uuid = UUID.fromString(data.get("uuid").getAsString());
-                    String model = "classic";
-                    if (data.has("variant") && !data.get("variant").isJsonNull()) {
-                        model = data.get("variant").getAsString();
+
+                    String model = extractModelFromValue(value);
+                    if ("classic".equals(model) && data.has("variant") && !data.get("variant").isJsonNull()) {
+                        String apiVariant = data.get("variant").getAsString();
+                        if ("slim".equalsIgnoreCase(apiVariant)) {
+                            model = "slim";
+                        }
                     }
+
+                    SkinCloset.LOGGER.info("Final determined model: {}", model);
                     callback.accept(new SkinProfile(profileName, uuid, value, signature, model));
                 } else {
                     SkinCloset.LOGGER.error("Mineskin API (upload) Error: {} \nResponse: {}", response.statusCode(), response.body());
@@ -116,6 +118,49 @@ public class SkinDownloader {
                 callback.accept(null);
             }
         });
+    }
+
+    private static String extractModelFromValue(String value) {
+        try {
+            String decodedValue = new String(Base64.getDecoder().decode(value));
+            JsonObject textureJson = JsonParser.parseString(decodedValue).getAsJsonObject();
+            if (textureJson.has("textures") &&
+                    textureJson.getAsJsonObject("textures").has("SKIN") &&
+                    textureJson.getAsJsonObject("textures").getAsJsonObject("SKIN").has("metadata")) {
+
+                JsonObject metadata = textureJson.getAsJsonObject("textures").getAsJsonObject("SKIN").getAsJsonObject("metadata");
+                if (metadata.has("model")) {
+                    return metadata.get("model").getAsString();
+                }
+            }
+        } catch (Exception e) {
+
+        }
+        return "classic";
+    }
+
+    private static String detectModel(Path filePath) {
+        try (InputStream is = Files.newInputStream(filePath)) {
+            BufferedImage image = ImageIO.read(is);
+            if (image != null && image.getWidth() == 64 && image.getHeight() == 64) {
+                boolean isTransparent = true;
+                for (int y = 20; y < 32; y++) {
+                    int pixel = image.getRGB(55, y);
+                    int alpha = (pixel >> 24) & 0xff;
+                    if (alpha != 0) {
+                        isTransparent = false;
+                        break;
+                    }
+                }
+
+                if (isTransparent) {
+                    return "slim";
+                }
+            }
+        } catch (Exception e) {
+            SkinCloset.LOGGER.warn("Failed to detect skin model from file, defaulting to classic.", e);
+        }
+        return "classic";
     }
 
     public static void uploadSkinFromUrl(String profileName, String skinUrl, Consumer<SkinProfile> callback) {
@@ -144,10 +189,15 @@ public class SkinDownloader {
                     String value = texture.get("value").getAsString();
                     String signature = texture.get("signature").getAsString();
                     UUID uuid = UUID.fromString(data.get("uuid").getAsString());
-                    String model = "classic";
-                    if (data.has("variant") && !data.get("variant").isJsonNull()) {
-                        model = data.get("variant").getAsString();
+
+                    String model = extractModelFromValue(value);
+                    if ("classic".equals(model) && data.has("variant") && !data.get("variant").isJsonNull()) {
+                        String apiVariant = data.get("variant").getAsString();
+                        if ("slim".equalsIgnoreCase(apiVariant)) {
+                            model = "slim";
+                        }
                     }
+
                     callback.accept(new SkinProfile(profileName, uuid, value, signature, model));
                 } else {
                     SkinCloset.LOGGER.error("Mineskin API (url) Error: {} \nResponse: {}", response.statusCode(), response.body());
@@ -184,20 +234,29 @@ public class SkinDownloader {
         return null;
     }
 
-    private static HttpRequest.BodyPublisher ofMimeMultipartData(Path filePath, String boundary, String profileName) throws IOException {
+    private static HttpRequest.BodyPublisher ofMimeMultipartData(Path filePath, String boundary, String profileName, String model) throws IOException {
         byte[] fileBytes = Files.readAllBytes(filePath);
         String fileName = filePath.getFileName().toString();
         String CRLF = "\r\n";
-        String part1 = "--" + boundary + CRLF +
+
+        String partName = "--" + boundary + CRLF +
                 "Content-Disposition: form-data; name=\"name\"" + CRLF + CRLF +
                 profileName + CRLF;
-        String part2Header = "--" + boundary + CRLF +
+
+        String partVariant = "--" + boundary + CRLF +
+                "Content-Disposition: form-data; name=\"variant\"" + CRLF + CRLF +
+                model + CRLF;
+
+        String partFile = "--" + boundary + CRLF +
                 "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + CRLF +
                 "Content-Type: image/png" + CRLF + CRLF;
+
         String footer = CRLF + "--" + boundary + "--" + CRLF;
+
         return HttpRequest.BodyPublishers.ofByteArrays(List.of(
-                part1.getBytes(),
-                part2Header.getBytes(),
+                partName.getBytes(),
+                partVariant.getBytes(),
+                partFile.getBytes(),
                 fileBytes,
                 footer.getBytes()
         ));
