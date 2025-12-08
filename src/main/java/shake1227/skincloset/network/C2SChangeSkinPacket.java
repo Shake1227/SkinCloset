@@ -22,6 +22,9 @@ import java.util.function.Supplier;
 import shake1227.skincloset.config.ServerConfig;
 import net.minecraft.commands.CommandSourceStack;
 
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.network.protocol.game.ClientboundAddPlayerPacket;
+
 public class C2SChangeSkinPacket {
 
     private final String value;
@@ -58,6 +61,10 @@ public class C2SChangeSkinPacket {
 
             PlayerList playerList = player.getServer().getPlayerList();
             ServerPlayer sPlayer = (ServerPlayer) player;
+
+            sPlayer.getServer().getPlayerList().broadcastAll(new ClientboundPlayerInfoRemovePacket(List.of(sPlayer.getUUID())));
+            sPlayer.getServer().getPlayerList().broadcastAll(ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(List.of(sPlayer)));
+
             sPlayer.connection.send(new ClientboundRespawnPacket(
                     sPlayer.level().dimensionTypeId(),
                     sPlayer.level().dimension(),
@@ -75,8 +82,19 @@ public class C2SChangeSkinPacket {
             sPlayer.connection.send(new ClientboundSetCarriedItemPacket(sPlayer.getInventory().selected));
 
             sPlayer.inventoryMenu.broadcastChanges();
-            sPlayer.getServer().getPlayerList().broadcastAll(new ClientboundPlayerInfoRemovePacket(List.of(sPlayer.getUUID())));
-            sPlayer.getServer().getPlayerList().broadcastAll(ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(List.of(sPlayer)));
+
+            ClientboundRemoveEntitiesPacket removePacket = new ClientboundRemoveEntitiesPacket(sPlayer.getId());
+            ClientboundAddPlayerPacket addPacket = new ClientboundAddPlayerPacket(sPlayer);
+
+            for (ServerPlayer otherPlayer : playerList.getPlayers()) {
+                if (otherPlayer.getUUID().equals(sPlayer.getUUID())) {
+                    continue;
+                }
+                otherPlayer.connection.send(removePacket);
+                otherPlayer.connection.send(addPacket);
+            }
+
+            playerList.sendAllPlayerInfo(sPlayer);
 
             try {
                 List<? extends String> consoleCommands = ServerConfig.INSTANCE.consoleCommand.get();
@@ -107,7 +125,6 @@ public class C2SChangeSkinPacket {
 
             playerList.sendPlayerPermissionLevel(sPlayer);
             playerList.sendLevelInfo(sPlayer, sPlayer.serverLevel());
-            playerList.sendAllPlayerInfo(sPlayer);
             sPlayer.connection.send(new ClientboundUpdateAttributesPacket(sPlayer.getId(), sPlayer.getAttributes().getSyncableAttributes()));
         });
         ctx.get().setPacketHandled(true);

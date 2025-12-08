@@ -26,7 +26,6 @@ minecraft {
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
 
-            // 開発環境でのJPMS (Java 9+ モジュールシステム) エラーを回避するために必要
             jvmArg "--patch-module=${mod_id}=${sourceSets.main.output.asPath}"
 
             mods {
